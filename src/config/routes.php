@@ -1,10 +1,10 @@
 <?php
 
-use App\Routes\HomeRouter;
+use App\Routes\HomeRoute;
 
 return [
     'GET' => [
-        '/' => HomeRouter::class,
+        '/' => HomeRoute::class,
     ],
     'POST' => [
     ]

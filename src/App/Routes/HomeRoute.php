@@ -6,7 +6,7 @@ use Framework\ApiResponse;
 use Framework\Database;
 use Framework\IRouteHandler;
 
-class HomeRouter implements IRouteHandler
+class HomeRoute implements IRouteHandler
 {
     function validation_rules(): array
     {
@@ -15,6 +15,6 @@ class HomeRouter implements IRouteHandler
 
     function process(): ApiResponse
     {        
-        return res_ok([], 'visit https://www.online-exams.in');
+        return res_ok([], 'visit home page' );
     }
 }
