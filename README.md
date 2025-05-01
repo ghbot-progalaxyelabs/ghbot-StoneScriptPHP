@@ -3,17 +3,39 @@
 
 ---------------------------------------------------------------
 
+## Setup 
+To setup a PHP project for your backend api, use `composer create-project` command line
+```
+composer create-project progalaxyelabs/stone-script-php api
+```
+this will create a project in the `api` folder in your current folder and install the dependencies.
+
+## Run
+To run the php project, you can use the `serve.php` script from the project root
+```
+php serve.php
+```
+By default, this will use the port 9100.
+You can check the server running by opening the browser and navigating to `http://localhost:9100`
+
 
 ## Workflow
 
-### create sql function:
+Create all the database tables in individual .pssql files in the  `src/App/Database/postgres/tables/` folder
 
-in pgadmin4, develop postgresql function. save the function as an pssql file under `postgres/functions` folder. ex: `postgresql/functions/function_name.pssql
+Create all the database queries as SQL functions in individual .pssql files in the  `src/App/Database/postgres/functions/` folder
+
+if there is and seed data, create those as SQl scripts (insert statements) as .pssql files in the `src/App/Database/postgres/seeds/` folder
+
+
+### create sql functions:
+
+In pgadmin4, develop postgresql functions. test them and once working, save them as individual files under `src/App/Database/postgres/functions/` folder. ex: `src\App\Database\postgresql/functions/function_name.pssql`
 
 
 ### create php modal class for this sql function:
 
-api server: create a file with the function name  `function_name.pssql`
+you can use the cli script to generate a PHP class for this sql function that will help in identifying the function arguments and return values
 
 commands to run in terminal:
 
@@ -25,7 +47,10 @@ php generate-model.php function_name.pssql
 
 ```
 
-this will create a `FnFunctionName.php` in `Database/Functions` folder
+this will create a `FnFunctionName.php` in `src/App/Database/Functions` folder
+
+
+This can be used to call the SQl function from PHP with proper arguments with reasonable typing that PHP allows. To see that in action, create an api route.
 
 
 ### create a api route:
@@ -42,12 +67,23 @@ this will create a `RouteNameRoute.php` file in `Routes` folder
 
 ### create url to class route mapping:
 
-in `Config/routes.php`, add a url-to-class route mapping
+in `src/App/Config/routes.php`, add a url-to-class route mapping
 
 ex: for adding a post route, add the line in the `POST` section
 
-`'/update-trophies' => RouteNameRoute:class`
+```
+return [
+    ...
+    'POST' => [
+         ...
+        '/update-trophies' => RouteNameRoute:class
+        ...
+    ]
+    ...
+];
 
+
+```
 
 ### implement the route class's process function:
 
@@ -59,10 +95,17 @@ ex:
 
 ```php
 
-        $data = FnUpdateCourseDetails::run($this->name, $this->email, $this->course_id, $this->batch_id, $this->section_id);
-        return new ApiResponse('ok', '', [
-            'course' => $data
-        ]);
+$data = FnUpdateCourseDetails::run(
+    $this->name, 
+    $this->email, 
+    $this->course_id, 
+    $this->batch_id, 
+    $this->section_id
+);
+
+return new ApiResponse('ok', '', [
+    'course' => $data
+]);
         
 ```
 
