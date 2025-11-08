@@ -101,8 +101,10 @@ abstract class RequestParser
             }
         } catch (Exception $exception) {
             log_debug('Exception: ' . $exception->getMessage());
+            $response = e500(DEBUG_MODE ? $exception->getMessage() : 'Internal server error');
         } catch (Error $error) {
-            log_debug('Error:' . $error->getMessage());
+            log_debug('Error: ' . $error->getMessage());
+            $response = e500(DEBUG_MODE ? $error->getMessage() : 'Internal server error');
         }
 
         $this->add_cors_headers();
