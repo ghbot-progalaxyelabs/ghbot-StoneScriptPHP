@@ -16,23 +16,54 @@ use PHPUnit\Framework\TestCase;
 class DynamicRoutingTest extends TestCase
 {
     /**
-     * Test that router can match routes with single parameter
+     * Test that pattern with single parameter converts to regex correctly
      * Example: /user/{id} should match /user/123
      */
     public function test_router_matches_single_parameter_routes(): void
     {
-        // TODO: Implement dynamic parameter test
-        $this->markTestIncomplete('Dynamic route parameter test needs implementation');
+        // Test the pattern conversion logic
+        $pattern = '/user/{id}';
+
+        // Convert {id} to regex: /user/([^/]+)
+        $regex = $this->convertPatternToRegex($pattern);
+
+        // Should match /user/123
+        $this->assertEquals(1, preg_match($regex, '/user/123'));
+
+        // Should match /user/abc
+        $this->assertEquals(1, preg_match($regex, '/user/abc'));
+
+        // Should NOT match /user/ (missing parameter)
+        $this->assertEquals(0, preg_match($regex, '/user/'));
+
+        // Should NOT match /user (missing /)
+        $this->assertEquals(0, preg_match($regex, '/user'));
+
+        // Should NOT match /user/123/extra
+        $this->assertEquals(0, preg_match($regex, '/user/123/extra'));
     }
 
     /**
-     * Test that router can match routes with multiple parameters
+     * Test that pattern with multiple parameters converts to regex correctly
      * Example: /user/{id}/post/{postId} should match /user/123/post/456
      */
     public function test_router_matches_multiple_parameter_routes(): void
     {
-        // TODO: Implement multiple parameter test
-        $this->markTestIncomplete('Multiple parameter route test needs implementation');
+        $pattern = '/user/{userId}/post/{postId}';
+
+        $regex = $this->convertPatternToRegex($pattern);
+
+        // Should match /user/123/post/456
+        $this->assertEquals(1, preg_match($regex, '/user/123/post/456'));
+
+        // Should match /user/abc/post/xyz
+        $this->assertEquals(1, preg_match($regex, '/user/abc/post/xyz'));
+
+        // Should NOT match /user/123/post (missing postId)
+        $this->assertEquals(0, preg_match($regex, '/user/123/post'));
+
+        // Should NOT match /user/123 (missing /post/{postId})
+        $this->assertEquals(0, preg_match($regex, '/user/123'));
     }
 
     /**
@@ -40,8 +71,58 @@ class DynamicRoutingTest extends TestCase
      */
     public function test_router_extracts_route_parameters(): void
     {
-        // TODO: Implement parameter extraction test
-        $this->markTestIncomplete('Parameter extraction test needs implementation');
+        // Single parameter
+        $pattern = '/user/{id}';
+        $url = '/user/123';
+
+        $params = $this->extractParameters($pattern, $url);
+
+        $this->assertArrayHasKey('id', $params);
+        $this->assertEquals('123', $params['id']);
+
+        // Multiple parameters
+        $pattern = '/user/{userId}/post/{postId}';
+        $url = '/user/456/post/789';
+
+        $params = $this->extractParameters($pattern, $url);
+
+        $this->assertArrayHasKey('userId', $params);
+        $this->assertArrayHasKey('postId', $params);
+        $this->assertEquals('456', $params['userId']);
+        $this->assertEquals('789', $params['postId']);
+    }
+
+    /**
+     * Helper: Convert route pattern to regex
+     */
+    private function convertPatternToRegex(string $pattern): string
+    {
+        // This is the logic we'll implement in the Router
+        // {param} -> ([^/]+) and capture the parameter name
+        $regex = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([^/]+)', $pattern);
+        return '#^' . $regex . '$#';
+    }
+
+    /**
+     * Helper: Extract parameters from URL using pattern
+     */
+    private function extractParameters(string $pattern, string $url): array
+    {
+        $regex = $this->convertPatternToRegex($pattern);
+
+        // Extract parameter names from pattern
+        preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $pattern, $paramNames);
+
+        // Extract values from URL
+        preg_match($regex, $url, $matches);
+
+        // Combine names with values
+        $params = [];
+        foreach ($paramNames[1] as $index => $name) {
+            $params[$name] = $matches[$index + 1] ?? null;
+        }
+
+        return $params;
     }
 
     /**

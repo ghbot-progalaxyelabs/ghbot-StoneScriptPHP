@@ -14,6 +14,7 @@ abstract class RequestParser
     public array $routes = [];
     public array $allowed_origins = [];
     public string $error = '';
+    protected array $route_params = [];  // Parameters extracted from URL pattern
 
 
     protected string $request_path;
@@ -67,6 +68,10 @@ abstract class RequestParser
             return e400($this->error);
         }
 
+        // Merge route parameters (from URL) with input data (from body/query)
+        // Route params take precedence to prevent injection
+        $all_input = array_merge($input, $this->route_params);
+
         $reflect = new ReflectionClass($instance);
         $properties = $reflect->getProperties(ReflectionProperty::IS_PUBLIC);
 
@@ -74,10 +79,10 @@ abstract class RequestParser
         $missing_properties = [];
         foreach ($properties as $property) {
             $property_name = $property->getName();
-            if (array_key_exists($property_name, $input)) {
-                $instance->$property_name = $input[$property_name];
+            if (array_key_exists($property_name, $all_input)) {
+                $instance->$property_name = $all_input[$property_name];
             } else {
-                log_debug(" expected [$property_name] not found in request body");
+                log_debug(" expected [$property_name] not found in request");
                 $missing_properties[] = $property_name;
             }
         }
@@ -139,7 +144,12 @@ class GetRequestParser extends RequestParser
 
     public function identify_route(): string
     {
-        return $this->routes['GET'][$this->request_path] ?? '';
+        $match = RouteMatcher::match($this->routes['GET'] ?? [], $this->request_path);
+
+        // Store extracted route parameters for use in _process()
+        $this->route_params = $match['params'];
+
+        return $match['handler'] ?? '';
     }
 
     public function respond(): ApiResponse
@@ -178,7 +188,12 @@ class PostRequestParser extends RequestParser
 
     public function identify_route(): string
     {
-        return $this->routes['POST'][$this->request_path] ?? '';
+        $match = RouteMatcher::match($this->routes['POST'] ?? [], $this->request_path);
+
+        // Store extracted route parameters for use in _process()
+        $this->route_params = $match['params'];
+
+        return $match['handler'] ?? '';
     }
 
     public function respond(): ApiResponse
