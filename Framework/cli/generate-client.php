@@ -35,28 +35,44 @@ spl_autoload_register(function ($class) {
 });
 
 // Parse command line arguments
-$outputPath = 'client/api.ts';
+$outputDir = 'client';
+$packageName = '@stonescript/api-client';
+$apiVersion = '1.0.0';
 
 foreach ($argv as $arg) {
     if (str_starts_with($arg, '--output=')) {
-        $outputPath = substr($arg, 9);
+        $outputDir = substr($arg, 9);
+    }
+    if (str_starts_with($arg, '--name=')) {
+        $packageName = substr($arg, 7);
     }
     if (in_array($arg, ['--help', '-h', 'help'])) {
         echo "TypeScript Client Generator\n";
         echo "============================\n\n";
-        echo "Usage: php generate client [--output=<path>]\n\n";
+        echo "Usage: php generate client [options]\n\n";
         echo "Options:\n";
-        echo "  --output=<path>  Output file path (default: client/api.ts)\n\n";
+        echo "  --output=<dir>   Output directory (default: client)\n";
+        echo "  --name=<name>    Package name (default: @stonescript/api-client)\n\n";
         echo "Example:\n";
         echo "  php generate client\n";
-        echo "  php generate client --output=frontend/src/api/client.ts\n";
+        echo "  php generate client --output=packages/api-client\n";
+        echo "  php generate client --name=@myapp/api\n\n";
+        echo "Output structure:\n";
+        echo "  client/\n";
+        echo "  ├── package.json\n";
+        echo "  ├── tsconfig.json\n";
+        echo "  ├── README.md\n";
+        echo "  └── src/\n";
+        echo "      └── index.ts\n\n";
+        echo "Install in Angular project:\n";
+        echo "  npm install file:../client\n";
         exit(0);
     }
 }
 
 // Convert to absolute path if relative
-if (!str_starts_with($outputPath, '/')) {
-    $outputPath = ROOT_PATH . $outputPath;
+if (!str_starts_with($outputDir, '/')) {
+    $outputDir = ROOT_PATH . $outputDir;
 }
 
 /**
@@ -413,18 +429,135 @@ echo "Found " . count($routes) . " route(s)\n";
 echo "Generating TypeScript client...\n";
 $clientCode = generateClient($routes);
 
-// Create output directory if needed
-$outputDir = dirname($outputPath);
-if (!is_dir($outputDir)) {
-    if (!mkdir($outputDir, 0755, true)) {
-        echo "Error: Failed to create output directory: $outputDir\n";
+// Create output directory structure
+$srcDir = $outputDir . DIRECTORY_SEPARATOR . 'src';
+if (!is_dir($srcDir)) {
+    if (!mkdir($srcDir, 0755, true)) {
+        echo "Error: Failed to create src directory: $srcDir\n";
         exit(1);
     }
 }
 
-file_put_contents($outputPath, $clientCode);
+// Generate package.json
+$packageJson = json_encode([
+    'name' => $packageName,
+    'version' => $apiVersion,
+    'description' => 'Auto-generated TypeScript API client for StoneScriptPHP backend',
+    'main' => 'dist/index.js',
+    'types' => 'dist/index.d.ts',
+    'scripts' => [
+        'build' => 'tsc',
+        'prepublishOnly' => 'npm run build'
+    ],
+    'keywords' => ['api', 'client', 'typescript', 'stonescript'],
+    'author' => '',
+    'license' => 'MIT',
+    'devDependencies' => [
+        'typescript' => '^5.0.0'
+    ],
+    'files' => [
+        'dist',
+        'src',
+        'README.md'
+    ]
+], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-echo "✓ Generated TypeScript client: $outputPath\n";
-echo "\nUsage in your frontend:\n";
-echo "  import { api } from './api';\n";
-echo "  const result = await api.functionName(data);\n";
+// Generate tsconfig.json
+$tsConfig = json_encode([
+    'compilerOptions' => [
+        'target' => 'ES2020',
+        'module' => 'ES2020',
+        'lib' => ['ES2020', 'DOM'],
+        'declaration' => true,
+        'outDir' => './dist',
+        'rootDir' => './src',
+        'strict' => true,
+        'esModuleInterop' => true,
+        'skipLibCheck' => true,
+        'forceConsistentCasingInFileNames' => true,
+        'moduleResolution' => 'node'
+    ],
+    'include' => ['src/**/*'],
+    'exclude' => ['node_modules', 'dist']
+], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+// Generate README.md
+$readme = <<<MD
+# API Client
+
+Auto-generated TypeScript API client for StoneScriptPHP backend.
+
+**DO NOT EDIT MANUALLY** - Regenerate using: `php generate client`
+
+## Installation
+
+### For Angular Projects
+
+```bash
+npm install file:../client
+```
+
+### Import and Use
+
+```typescript
+import { api } from '@stonescript/api-client';
+
+// Use the typed API client
+const result = await api.postLogin({
+  email: 'user@example.com',
+  password: 'secret'
+});
+
+console.log(result.token);
+```
+
+## Development
+
+### Build
+
+```bash
+npm run build
+```
+
+This compiles TypeScript to JavaScript in the `dist/` directory.
+
+## Regenerating
+
+When routes change on the backend:
+
+```bash
+cd /path/to/backend
+php generate client
+```
+
+This will update all types and API functions automatically.
+
+MD;
+
+// Generate .gitignore
+$gitignore = <<<IGNORE
+node_modules/
+dist/
+*.log
+.DS_Store
+IGNORE;
+
+// Write all files
+file_put_contents($outputDir . DIRECTORY_SEPARATOR . 'package.json', $packageJson);
+file_put_contents($outputDir . DIRECTORY_SEPARATOR . 'tsconfig.json', $tsConfig);
+file_put_contents($outputDir . DIRECTORY_SEPARATOR . 'README.md', $readme);
+file_put_contents($outputDir . DIRECTORY_SEPARATOR . '.gitignore', $gitignore);
+file_put_contents($srcDir . DIRECTORY_SEPARATOR . 'index.ts', $clientCode);
+
+echo "✓ Generated npm package structure in: $outputDir\n";
+echo "  ├── package.json\n";
+echo "  ├── tsconfig.json\n";
+echo "  ├── README.md\n";
+echo "  ├── .gitignore\n";
+echo "  └── src/index.ts\n";
+echo "\nInstall in your Angular project:\n";
+echo "  cd /path/to/angular-project\n";
+echo "  npm install file:" . str_replace(ROOT_PATH, '../', $outputDir) . "\n";
+echo "\nThen import in your Angular code:\n";
+echo "  import { api } from '$packageName';\n";
+echo "  const result = await api.postLogin({ email: '...', password: '...' });\n";
