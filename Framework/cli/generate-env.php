@@ -19,6 +19,22 @@ $env_example_path = $root_path . DIRECTORY_SEPARATOR . '.env.example';
 // Load the Env class to get the schema
 require_once $root_path . DIRECTORY_SEPARATOR . 'Framework' . DIRECTORY_SEPARATOR . 'Env.php';
 
+// Check for help flag
+if (in_array('--help', $argv ?? []) || in_array('-h', $argv ?? []) || in_array('help', $argv ?? [])) {
+    echo "Environment Configuration Generator\n";
+    echo "====================================\n\n";
+    echo "Usage: php generate env [options]\n\n";
+    echo "Options:\n";
+    echo "  --force      Overwrite existing values with defaults\n";
+    echo "  --example    Generate .env.example instead of .env\n";
+    echo "  --help, -h   Show this help message\n\n";
+    echo "Examples:\n";
+    echo "  php generate env                # Generate/update .env file\n";
+    echo "  php generate env --force        # Regenerate with defaults\n";
+    echo "  php generate env --example      # Generate .env.example\n";
+    exit(0);
+}
+
 $force = in_array('--force', $argv ?? []);
 $example = in_array('--example', $argv ?? []);
 
