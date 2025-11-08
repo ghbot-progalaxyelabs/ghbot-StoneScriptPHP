@@ -25,3 +25,9 @@ function e400($message = 'Bad Request'): ApiResponse
     http_response_code(400);
     return res_error($message);
 }
+
+function e415($message = 'Unsupported Media Type'): ApiResponse
+{
+    http_response_code(415);
+    return res_error($message);
+}

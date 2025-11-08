@@ -60,7 +60,11 @@ abstract class RequestParser
 
         $input = $this->extract_input();
         if ($this->error) {
-            return e400();
+            // Return appropriate error based on error type
+            if ($this->error === 'unsupported_media_type') {
+                return e415('Content-Type must be application/json');
+            }
+            return e400($this->error);
         }
 
         $reflect = new ReflectionClass($instance);
@@ -150,11 +154,14 @@ class PostRequestParser extends RequestParser
     {
         $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
 
-        if ($content_type !== 'application/json') {
-            $this->error = 'invalid content type. 
-                            expected application/json. 
-                            avoid using charset=utf-8 if included';
-            log_debug($this->error);
+        // Extract media type (before semicolon) to handle charset parameters
+        // e.g., "application/json; charset=utf-8" -> "application/json"
+        $media_type = explode(';', $content_type)[0];
+        $media_type = trim($media_type);
+
+        if ($media_type !== 'application/json') {
+            $this->error = 'unsupported_media_type';
+            log_debug("Unsupported Content-Type: {$content_type}. Expected application/json");
             return [];
         }
 
