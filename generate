@@ -31,6 +31,7 @@ define('CLI_SCRIPTS_PATH', CLI_ROOT_PATH . 'Framework' . DIRECTORY_SEPARATOR . '
 // Available commands mapped to their script files
 $available_commands = [
     'route'   => 'generate-route.php',
+    'client'  => 'generate-client.php',
     'env'     => 'generate-env.php',
     'model'   => 'generate-model.php',
     'migrate' => 'migrate.php',
@@ -113,8 +114,12 @@ function showHelp(array $commands): void
 
     $command_help = [
         'route'   => "Generate a new route handler class\n" .
-                     "         Usage: php generate route <route-name>\n" .
-                     "         Example: php generate route user-login",
+                     "         Usage: php generate route <method> <path>\n" .
+                     "         Example: php generate route post /login",
+
+        'client'  => "Generate TypeScript API client from routes\n" .
+                     "         Usage: php generate client [--output=<path>]\n" .
+                     "         Example: php generate client --output=frontend/src/api.ts",
 
         'env'     => "Generate or update .env file from schema\n" .
                      "         Usage: php generate env [--force] [--example]\n" .
