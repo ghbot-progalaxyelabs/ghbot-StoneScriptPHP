@@ -1,15 +1,40 @@
 <?php
 
-// php generate-model.php filename.pssql
+/**
+ * Model Generator
+ *
+ * Generates PHP model classes from PostgreSQL function definitions.
+ *
+ * Usage:
+ *   php generate model <filename.pssql>
+ *
+ * Example:
+ *   php generate model get_user.pssql
+ */
 
-if ($argc !== 2) {
-    echo 'usage: php generate-model.php filename.pssql' . PHP_EOL;
-    die(0);
+// Determine the root path (go up two levels from Framework/cli)
+define('ROOT_PATH', dirname(__DIR__, 2) . DIRECTORY_SEPARATOR);
+
+// Check for help flag
+if ($argc === 1 || ($argc === 2 && in_array($argv[1], ['--help', '-h', 'help']))) {
+    echo "Model Generator\n";
+    echo "===============\n\n";
+    echo "Usage: php generate model <filename.pssql>\n\n";
+    echo "Arguments:\n";
+    echo "  filename.pssql    PostgreSQL function file in postgresql/functions/\n\n";
+    echo "Example:\n";
+    echo "  php generate model get_user.pssql\n";
+    exit(0);
 }
 
-$src_filepath = join(DIRECTORY_SEPARATOR, [
-    '..', 'postgresql', 'functions', str_replace('..', '.', $argv[1])
-]);
+if ($argc !== 2) {
+    echo "Error: Invalid number of arguments\n";
+    echo "Usage: php generate model <filename.pssql>\n";
+    echo "Run 'php generate model --help' for more information.\n";
+    exit(1);
+}
+
+$src_filepath = ROOT_PATH . 'postgresql' . DIRECTORY_SEPARATOR . 'functions' . DIRECTORY_SEPARATOR . str_replace('..', '.', $argv[1]);
 
 if (!file_exists($src_filepath)) {
     echo 'file does not exist' . PHP_EOL;
@@ -135,7 +160,7 @@ $lines[] = '        return Database::' . ($is_return_table ? 'result_as_table' :
 $lines[] = '    }';
 $lines[] = '}';
 
-$dst_filepath = '..' . DIRECTORY_SEPARATOR . 'Database' . DIRECTORY_SEPARATOR . 'Functions' . DIRECTORY_SEPARATOR . $fn_class_name . '.php';
+$dst_filepath = ROOT_PATH . 'Database' . DIRECTORY_SEPARATOR . 'Functions' . DIRECTORY_SEPARATOR . $fn_class_name . '.php';
 $status = file_put_contents($dst_filepath, join("\n", $lines));
 if ($status === false) {
     echo 'error writing to file ' . $dst_filepath . PHP_EOL;
