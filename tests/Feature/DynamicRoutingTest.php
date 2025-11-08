@@ -131,8 +131,56 @@ class DynamicRoutingTest extends TestCase
      */
     public function test_router_applies_route_group_prefix(): void
     {
-        // TODO: Implement route grouping test
-        $this->markTestIncomplete('Route grouping test needs implementation');
+        // Test with RouteCompiler directly
+        $routes = [
+            '/' => 'HomeRoute',
+            [
+                'prefix' => '/api/v1',
+                'routes' => [
+                    '/users' => 'UsersRoute',
+                    '/user/{id}' => 'UserRoute',
+                ]
+            ]
+        ];
+
+        $compiled = \Framework\RouteCompiler::compile($routes);
+
+        // Verify routes are flattened with prefix applied
+        $this->assertArrayHasKey('/', $compiled);
+        $this->assertArrayHasKey('/api/v1/users', $compiled);
+        $this->assertArrayHasKey('/api/v1/user/{id}', $compiled);
+
+        $this->assertEquals('HomeRoute', $compiled['/']);
+        $this->assertEquals('UsersRoute', $compiled['/api/v1/users']);
+        $this->assertEquals('UserRoute', $compiled['/api/v1/user/{id}']);
+
+        // Test with nested groups
+        $nestedRoutes = [
+            [
+                'prefix' => '/api',
+                'routes' => [
+                    [
+                        'prefix' => '/v1',
+                        'routes' => [
+                            '/users' => 'V1UsersRoute',
+                        ]
+                    ],
+                    [
+                        'prefix' => '/v2',
+                        'routes' => [
+                            '/users' => 'V2UsersRoute',
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        $compiledNested = \Framework\RouteCompiler::compile($nestedRoutes);
+
+        $this->assertArrayHasKey('/api/v1/users', $compiledNested);
+        $this->assertArrayHasKey('/api/v2/users', $compiledNested);
+        $this->assertEquals('V1UsersRoute', $compiledNested['/api/v1/users']);
+        $this->assertEquals('V2UsersRoute', $compiledNested['/api/v2/users']);
     }
 
     /**

@@ -24,6 +24,14 @@ abstract class RequestParser
         $this->routes = require CONFIG_PATH . 'routes.php';
         $this->allowed_origins =  require CONFIG_PATH . 'allowed_origins.php';
 
+        // Compile route groups for each HTTP method
+        foreach ($this->routes as $method => &$methodRoutes) {
+            if (is_array($methodRoutes)) {
+                $methodRoutes = RouteCompiler::compile($methodRoutes);
+            }
+        }
+        unset($methodRoutes); // Break reference
+
         $this->request_path = parse_url($_SERVER['REQUEST_URI'])['path'] ?? '';
         log_debug("request path is [$this->request_path]");
     }
