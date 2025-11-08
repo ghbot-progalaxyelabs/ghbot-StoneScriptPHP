@@ -14,6 +14,7 @@ abstract class RequestParser
     public array $routes = [];
     public array $allowed_origins = [];
     public string $error = '';
+    protected array $route_params = [];  // Parameters extracted from URL pattern
 
 
     protected string $request_path;
@@ -22,6 +23,14 @@ abstract class RequestParser
     {
         $this->routes = require CONFIG_PATH . 'routes.php';
         $this->allowed_origins =  require CONFIG_PATH . 'allowed_origins.php';
+
+        // Compile route groups for each HTTP method
+        foreach ($this->routes as $method => &$methodRoutes) {
+            if (is_array($methodRoutes)) {
+                $methodRoutes = RouteCompiler::compile($methodRoutes);
+            }
+        }
+        unset($methodRoutes); // Break reference
 
         $this->request_path = parse_url($_SERVER['REQUEST_URI'])['path'] ?? '';
         log_debug("request path is [$this->request_path]");
@@ -60,8 +69,16 @@ abstract class RequestParser
 
         $input = $this->extract_input();
         if ($this->error) {
-            return e400();
+            // Return appropriate error based on error type
+            if ($this->error === 'unsupported_media_type') {
+                return e415('Content-Type must be application/json');
+            }
+            return e400($this->error);
         }
+
+        // Merge route parameters (from URL) with input data (from body/query)
+        // Route params take precedence to prevent injection
+        $all_input = array_merge($input, $this->route_params);
 
         $reflect = new ReflectionClass($instance);
         $properties = $reflect->getProperties(ReflectionProperty::IS_PUBLIC);
@@ -70,10 +87,10 @@ abstract class RequestParser
         $missing_properties = [];
         foreach ($properties as $property) {
             $property_name = $property->getName();
-            if (array_key_exists($property_name, $input)) {
-                $instance->$property_name = $input[$property_name];
+            if (array_key_exists($property_name, $all_input)) {
+                $instance->$property_name = $all_input[$property_name];
             } else {
-                log_debug(" expected [$property_name] not found in request body");
+                log_debug(" expected [$property_name] not found in request");
                 $missing_properties[] = $property_name;
             }
         }
@@ -101,8 +118,10 @@ abstract class RequestParser
             }
         } catch (Exception $exception) {
             log_debug('Exception: ' . $exception->getMessage());
+            $response = e500(DEBUG_MODE ? $exception->getMessage() : 'Internal server error');
         } catch (Error $error) {
-            log_debug('Error:' . $error->getMessage());
+            log_debug('Error: ' . $error->getMessage());
+            $response = e500(DEBUG_MODE ? $error->getMessage() : 'Internal server error');
         }
 
         $this->add_cors_headers();
@@ -133,7 +152,12 @@ class GetRequestParser extends RequestParser
 
     public function identify_route(): string
     {
-        return $this->routes['GET'][$this->request_path] ?? '';
+        $match = RouteMatcher::match($this->routes['GET'] ?? [], $this->request_path);
+
+        // Store extracted route parameters for use in _process()
+        $this->route_params = $match['params'];
+
+        return $match['handler'] ?? '';
     }
 
     public function respond(): ApiResponse
@@ -148,11 +172,14 @@ class PostRequestParser extends RequestParser
     {
         $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
 
-        if ($content_type !== 'application/json') {
-            $this->error = 'invalid content type. 
-                            expected application/json. 
-                            avoid using charset=utf-8 if included';
-            log_debug($this->error);
+        // Extract media type (before semicolon) to handle charset parameters
+        // e.g., "application/json; charset=utf-8" -> "application/json"
+        $media_type = explode(';', $content_type)[0];
+        $media_type = trim($media_type);
+
+        if ($media_type !== 'application/json') {
+            $this->error = 'unsupported_media_type';
+            log_debug("Unsupported Content-Type: {$content_type}. Expected application/json");
             return [];
         }
 
@@ -169,7 +196,12 @@ class PostRequestParser extends RequestParser
 
     public function identify_route(): string
     {
-        return $this->routes['POST'][$this->request_path] ?? '';
+        $match = RouteMatcher::match($this->routes['POST'] ?? [], $this->request_path);
+
+        // Store extracted route parameters for use in _process()
+        $this->route_params = $match['params'];
+
+        return $match['handler'] ?? '';
     }
 
     public function respond(): ApiResponse
