@@ -3,18 +3,19 @@
 /**
  * Route Generator
  *
- * Generates a new route handler class in the Routes directory.
+ * Generates a new route handler class in the src/App/Routes directory.
  *
  * Usage:
  *   php generate route <route-name>
  *
  * Example:
  *   php generate route user-login
- *   This will create Routes/UserLoginRoute.php
+ *   This will create src/App/Routes/UserLoginRoute.php
  */
 
 // Determine the root path (go up two levels from Framework/cli)
 define('ROOT_PATH', dirname(__DIR__, 2) . DIRECTORY_SEPARATOR);
+define('SRC_PATH', ROOT_PATH . 'src' . DIRECTORY_SEPARATOR);
 
 // Check for help flag
 if ($argc === 1 || ($argc === 2 && in_array($argv[1], ['--help', '-h', 'help']))) {
@@ -25,7 +26,7 @@ if ($argc === 1 || ($argc === 2 && in_array($argv[1], ['--help', '-h', 'help']))
     echo "  route-name    Name of the route (use kebab-case, e.g., user-login)\n\n";
     echo "Example:\n";
     echo "  php generate route user-login\n";
-    echo "  This will create Routes/UserLoginRoute.php\n";
+    echo "  This will create src/App/Routes/UserLoginRoute.php\n";
     exit(0);
 }
 
@@ -39,16 +40,16 @@ if ($argc !== 2) {
 // Convert route-name to RouteNameRoute class format
 $classname = implode(array_map(fn($str) => ucfirst($str), explode('-', $argv[1]))) . 'Route';
 $route_filename = $classname . '.php';
-$routes_dir = ROOT_PATH . 'Routes';
+$routes_dir = SRC_PATH . 'App' . DIRECTORY_SEPARATOR . 'Routes';
 $route_filepath = $routes_dir . DIRECTORY_SEPARATOR . $route_filename;
 
-// Create Routes directory if it doesn't exist
+// Create src/App/Routes directory if it doesn't exist
 if (!is_dir($routes_dir)) {
     if (!mkdir($routes_dir, 0755, true)) {
-        echo "Error: Failed to create Routes directory\n";
+        echo "Error: Failed to create src/App/Routes directory\n";
         exit(1);
     }
-    echo "Created Routes directory\n";
+    echo "Created src/App/Routes directory\n";
 }
 
 // Check if file already exists
@@ -61,10 +62,10 @@ if (file_exists($route_filepath)) {
 $route_file_content = <<<EOD
 <?php
 
-namespace Routes;
+namespace App\Routes;
 
 use Framework\IRouteHandler;
-use Models\ApiResponse;
+use Framework\ApiResponse;
 
 class $classname implements IRouteHandler
 {
@@ -75,8 +76,9 @@ class $classname implements IRouteHandler
 
     public function process(): ApiResponse
     {
-        // return new ApiResponse('ok', '', []);
-        throw new Exception('Not Implemented');
+        // TODO: Implement route logic
+        // Example: return res_ok([], 'Success message');
+        throw new \Exception('Not Implemented');
     }
 
 }
@@ -85,4 +87,5 @@ EOD;
 
 file_put_contents($route_filepath, $route_file_content);
 
-echo 'Created file ' . $route_filename . PHP_EOL;
+echo "Created route: src/App/Routes/$route_filename\n";
+echo "Namespace: App\\Routes\\$classname\n";
